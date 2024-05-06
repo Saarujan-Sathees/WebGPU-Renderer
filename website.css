@@ -1,0 +1,36 @@
+:root {
+    --primary: rgb(226 230 234);
+    --on-hover: rgb(53 57 62);
+    --accent: rgb(82, 161, 218);
+    --text: rgb(40 40 40);
+    --shadow: rgb(127 127 127 / 70%);
+    --test: rgb(76, 99, 36);
+}
+
+html, body {
+    width: 100%;
+    height: 100%;
+    margin: 0; 
+    padding: 0;
+    overflow: hidden;
+}
+
+.fps-counter {
+    position: absolute;
+    display: flex;
+    width: 8vw;
+    height: 8vh;
+    top: 2vh;
+    right: 2vh;
+    
+    border-radius: 5px;
+    z-index: 10 !important;
+    align-items: center;
+    justify-content: center;
+
+    font-family: system-ui;
+    font-size: 3vh;
+    color: var(--text);
+    background-color: rgb(226 230 234);
+    box-shadow: 0 0 5px var(--shadow);
+}
