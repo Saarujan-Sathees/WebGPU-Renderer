@@ -66,7 +66,7 @@ fn vertexMain(@builtin(vertex_index) vertID: u32, @builtin(instance_index) insta
 
     output.position = sceneInfo.perspective * grassPos;
     output.color = mix(topColor, bottomColor, widthFactor);
-    output.normal = (windMatrix * leanMatrix * vec3f(0.5 * (xSide - 0.5), 0, -1));
+    output.normal = (leanMatrix * vec3f(0.5 * (xSide - 0.5), 0, -1));
     output.surfaceToLight = (sceneInfo.lightPosition - grassPos).xyz;
     output.surfaceToCamera = abs(output.position - sceneInfo.cameraPosition).xyz;
     output.grassPos = grassPos;
