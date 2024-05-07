@@ -60,11 +60,9 @@ fn vertexMain(@builtin(vertex_index) vertID: u32, @builtin(instance_index) insta
 
     let x = grassDimensions.x * pow(widthFactor, 0.7) * (f32(triangleVertID) % 2 - 0.5) * (f32(triangleID) * -2.0 + 1.0);
     let y = grassDimensions.y * heightFactor;   
-    let windMatrix = rotateZ(easeOut(heightFactor * pow(sin(grassInfo.time * 0.75 + leanFactor), 2) / 3, leanFactor)) *
-                     rotateX(easeOut(heightFactor * pow(cos(grassInfo.time * 0.75), 2) * 0.05, leanFactor));
                      
     let leanMatrix = rotateY(rotationFactor * 0.5) * rotateX(leanFactor * heightFactor); 
-    let grassPos = vec4f(windMatrix * leanMatrix * vec3f(x, y, 0) + vec3f(offset.x, 0, offset.y), 1.0);
+    let grassPos = vec4f(leanMatrix * vec3f(x, y, 0) + vec3f(offset.x, 0, offset.y), 1.0);
 
     output.position = sceneInfo.perspective * grassPos;
     output.color = mix(topColor, bottomColor, widthFactor);
