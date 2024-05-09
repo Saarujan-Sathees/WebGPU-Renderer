@@ -4,6 +4,9 @@ import * as shapes from "./shapes.js";
 
 class Renderer {
     widthRange = document.body.clientWidth * 0.05;
+    KEY_BINDINGS = { 'q': new util.Vector(0, 1, 0), 'e': new util.Vector(0, -1, 0), 'w': new util.Vector(0, 0, 1),
+                     's': new util.Vector(0, 0, -1), 'd': new util.Vector(1, 0, 0), 'a': new util.Vector(-1, 0, 0)
+    };
     
     updateRenderTargets() {
         if (!this.context) return;
@@ -40,7 +43,7 @@ class Renderer {
 
     async controlMouse(ev = new MouseEvent()) {
         this.deviceInfo.mouseX = ev.clientX, this.deviceInfo.mouseY = ev.clientY;
-
+        
         if (ev.clientX > this.widthRange && ev.clientX < this.dimensions.get(0) - this.widthRange) {
             this.deviceInfo.camAngleX -= ev.movementY;
             this.deviceInfo.camAngleY += ev.movementX; 
@@ -48,14 +51,7 @@ class Renderer {
     }
 
     controlMovement(ev) {
-        switch (ev.key) {
-            case 'q': this.deviceInfo.camPosition.addEq(new util.Vector(0, 1, 0)); break;
-            case 'e': this.deviceInfo.camPosition.addEq(new util.Vector(0, -1, 0)); break;
-            case 'w': this.deviceInfo.camPosition.addEq(new util.Vector(0, 0, 1)); break;
-            case 's': this.deviceInfo.camPosition.addEq(new util.Vector(0, 0, -1)); break;
-            case 'd': this.deviceInfo.camPosition.addEq(new util.Vector(1, 0, 0)); break;
-            case 'a': this.deviceInfo.camPosition.addEq(new util.Vector(-1, 0, 0)); break;
-        }
+        if (this.KEY_BINDINGS[ev.key] != undefined) this.deviceInfo.camPosition.addEq(this.KEY_BINDINGS[ev.key]);
     }
 
     constructor(gpu = new util.GPU(), depth = 1200) {
@@ -93,12 +89,7 @@ class Renderer {
         }, description);
     }
 
-    async renderFrame(timestamp, fpsUpdateCycle = 1, fpsFrequencySum = 0) {
-        const texture = this.context.getCurrentTexture(), deltaTime = timestamp - this.deviceInfo.timestamp;
-        this.deviceInfo.timestamp = timestamp;
-        this.gpu.setRenderView(texture.createView(), this.msaaTexture.createView(), this.depthTexture.createView());
-
-        //Update Camera
+    updateCamera(deltaTime) {
         this.camera.move(this.deviceInfo.camPosition, deltaTime);
         if (this.deviceInfo.mouseX <= this.dimensions.get(0) * 0.05)
             this.deviceInfo.camAngleY -= 10;
@@ -110,14 +101,24 @@ class Renderer {
 
         this.deviceInfo.camAngleX = 0, this.deviceInfo.camAngleY = 0, this.deviceInfo.camPosition = new util.Vector(0, 0, 0);
         this.camera.updateUniforms("sceneInfo", this.gpu);
-        this.gpu.setUniform("grass", "grassInfo", "time", [timestamp]);
+    }
+
+    async renderFrame(timestamp, fpsUpdateCycle = 1, fpsFrequencySum = 0) {
+        const texture = this.context.getCurrentTexture(), deltaTime = timestamp - this.deviceInfo.timestamp;
+        this.deviceInfo.timestamp = timestamp;
+        this.gpu.setRenderView(texture.createView(), this.msaaTexture.createView(), this.depthTexture.createView());
+        this.updateCamera(deltaTime);
+        
+        //this.gpu.setUniform("grass", "grassInfo", "time", [timestamp]);
         this.gpu.renderFrame();
 
-        if (this.fpsCounter != null && fpsUpdateCycle == 10) {
+        /*if (this.fpsCounter != null && fpsUpdateCycle == 10) {
             this.fpsCounter.textContent = (10.0 / fpsFrequencySum).toFixed(0) + " FPS";
             fpsFrequencySum = 0;
             fpsUpdateCycle = 0;
-        }
+        }*/
+
+        this.fpsCounter.textContent = (1.0 / deltaTime).toFixed(0) + " FPS";
 
         requestAnimationFrame(time => { 
             if (this.fpsCounter != null)
@@ -127,7 +128,7 @@ class Renderer {
          });
     }
 
-    render() {
+    async render() {
         this.updateRenderTargets();
         requestAnimationFrame((time) => {
             this.renderFrame(time * 0.001);
@@ -295,6 +296,7 @@ async function generateTerrain(settings, renderer = new Renderer()) {
     markTime("Generated Terrain!");
 
     renderer.gpu.setVertexBuffer("terrain", terrain.getResults("vertices"));
+    renderer.gpu.autoVertexCount("terrain");
     renderer.gpu.setModelCount("terrain", null, 9);
     downloadArray("terrain.txt", terrain.getResults("vertices"));
     terrain.clear();
@@ -325,9 +327,8 @@ async function loadTerrain(settings, renderer = new Renderer()) {
         else 
             return val * settings.terrainSize.get(index % 3) / 100.0;
     })));
-
-
     
+    renderer.gpu.autoVertexCount("terrain");
     renderer.gpu.setModelCount("terrain", null, 9);
 }
 
@@ -345,8 +346,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 
     let display = new Renderer(gpu);
     currTime = performance.now();
-    /*
-    let terrainThread = generateTerrain({
+    /*let terrainThread = generateTerrain({
         amplitude: 1,
         frequency: 0.005,
         lacunarity: 1.95,
@@ -357,8 +357,7 @@ document.addEventListener("DOMContentLoaded", async () => {
         blockCount: new util.Vector(3, 1, 3),
         offset: new util.Vector(-150, -350, 0),
         color: new util.Color(175, 114, 44)
-    }, display);
-    */
+    }, display);*/
 
     await display.createPass("light", "light.wgsl");
     await generateSky(display);
@@ -386,10 +385,10 @@ document.addEventListener("DOMContentLoaded", async () => {
         } 
     });*/
     
-    let grassInstance = new Grass(new util.Vector(0.5, 8, 0), new util.Vector(100, 0, 100), new util.Vector(100, 0, 100), 
-                                  new util.Vector(-200, 100, 10), 6);
+    /*let grassInstance = new Grass(new util.Vector(0.5, 8, 0), new util.Vector(500, 0, 500), new util.Vector(500, 0, 500), 
+                                  new util.Vector(-200, 100, 10), 12);*/
 
-    await grassInstance.generate(display);
+    //await grassInstance.generate(display);
 
 
     /*let ground = new shapes.Quadrilateral(new util.Vertex(new util.Vector(1000, 0, -1000), new util.Color(255, 0, 0)),
@@ -402,19 +401,17 @@ document.addEventListener("DOMContentLoaded", async () => {
     let light = new shapes.Box(new util.Vertex(new util.Vector(100, 750, -50), new util.Color(255, 255, 255)),
                                 new util.Vertex(new util.Vector(150, 800, -100), new util.Color(255, 255, 255).multNum(1)));
     
-    console.log("Generating Terrain...");
     const terrainScale = 1000;
 
     //await terrainThread;
-    /*await loadTerrain({
+    await loadTerrain({
         url: "hillTerrain.txt",
         terrainSize: new util.Vector(1, 1, 1).multNum(terrainScale),
         offset: new util.Vector(-1, -0.55, -1).multNum(terrainScale),
         color: new util.Color(175, 114, 44)
-    }, display);*/
+    }, display);
     
-    markTime("Terrain Generated!");
-    console.log("Total Generation Time: " + (performance.now() - start).toFixed(0));
+    //markTime("Terrain Generated!");
     display.gpu.setVertexBuffer("light", light.toArray());
     display.gpu.setGlobalUniform("sceneInfo", "lightPosition", light.origin.toArr());
     display.gpu.setGlobalUniform("sceneInfo", "lightColor", light.emission.toArr());

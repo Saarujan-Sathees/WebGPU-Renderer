@@ -337,227 +337,6 @@ export function matrix4x4to3x3(mat = new Matrix(4, 4)) {
 
 //#endregion
 
-//#region Noise
-export class PerlinNoise {
-    noiseGrid = [];
-    length = 0;
-    width = 0;
-    F3 = 1.0 / 3.0;
-    G3 = 1.0 / 6.0;
-    F2 = this.F3 * 2.0;
-    F1 = this.F3 * 3.0;
-    G2 = this.G3 * 2.0;
-    G1 = this.G3 * 3.0;
-    gradients = [
-        new Vector(1, 1, 0), new Vector(-1, 1, 0), new Vector(1, -1, 0), new Vector(-1, -1, 0),
-        new Vector(1, 0, 1), new Vector(-1, 0, 1), new Vector(1, 0, -1), new Vector(-1, 0, -1),
-        new Vector(0, 1, 1), new Vector(0, -1, 1), new Vector(0, 1, -1), new Vector(0, -1, -1)
-    ];
-
-    perm = [ 151,160,137,91,90,15,
-             131,13,201,95,96,53,194,233,7,225,140,36,103,30,69,142,8,99,37,240,21,10,23,
-             190, 6,148,247,120,234,75,0,26,197,62,94,252,219,203,117,35,11,32,57,177,33,
-             88,237,149,56,87,174,20,125,136,171,168, 68,175,74,165,71,134,139,48,27,166,
-             77,146,158,231,83,111,229,122,60,211,133,230,220,105,92,41,55,46,245,40,244,
-             102,143,54, 65,25,63,161, 1,216,80,73,209,76,132,187,208, 89,18,169,200,196,
-             135,130,116,188,159,86,164,100,109,198,173,186, 3,64,52,217,226,250,124,123,
-             5,202,38,147,118,126,255,82,85,212,207,206,59,227,47,16,58,17,182,189,28,42,
-             223,183,170,213,119,248,152, 2,44,154,163, 70,221,153,101,155,167, 43,172,9,
-             129,22,39,253, 19,98,108,110,79,113,224,232,178,185, 112,104,218,246,97,228,
-             251,34,242,193,238,210,144,12,191,179,162,241, 81,51,145,235,249,14,239,107,
-             49,192,214, 31,181,199,106,157,184, 84,204,176,115,121,50,45,127, 4,150,254,
-             138,236,205,93,222,114,67,29,24,72,243,141,128,195,78,66,215,61,156,180,151,
-             160,137,91,90,15,131,13,201,95,96,53, 194,233,7,225,140,36,103,30,69,142, 8,
-             99,37,240,21,10,23,190, 6,148,247,120,234,75,0,26,197,62,94,252,219,203,117,
-             35,11,32,57,177,33,88,237,149,56,87,174,20,125,136,171,168, 68,175, 74, 165,
-             71,134,139,48,27,166,77,146,158,231,83,111,229,122,60,211,133,230, 220, 105,
-             92,41,55,46,245,40,244,102,143,54, 65,25,63,161, 1,216,80,73,209,76,132,187,
-             208, 89,18,169,200,196,135,130,116,188,159,86,164,100,109,198,173,186, 3,64,
-             52,217,226,250,124,123,5,202,38,147,118,126,255,82,85,212,207,206,59,227,47,
-             16,58,17,182,189,28,42,223,183,170,213,119,248,152, 2,44,154,163,70,221,153,
-             101,155,167, 43,172,9,129,22,39,253, 19,98,108,110,79,113,224,232, 178, 185, 
-             112,104,218,246,97,228,251,34,242,193,238,210,144,12,191,179,162,241, 81,51,
-             145,235,249,14,239,107,49,192,214, 31,181,199,106,157,184, 84,204, 176, 115,
-             121,50,45,127, 4,150,254,138,236,205,93,222,114,67,29,24,72,243,141,128,195,
-             78,66,215,61,156,180 ];
-    
-
-    constructor(length, width) {
-        this.length = length;
-        this.width = width;
-        for (let x = 0; x < length; ++x) {
-            this.noiseGrid.push(new Array(width).fill(0));
-        }
-    }
-
-    static async fromPNG(url) {
-        return new Promise(resolve => {
-            let img = new Image(); 
-            img.src = url;
-            
-            img.addEventListener("load", () => {
-                let canvas = document.createElement("canvas");
-                canvas.width = img.width;
-                canvas.height = img.height;
-                let context = canvas.getContext("2d");
-                
-                document.body.appendChild(canvas);
-                context.drawImage(img, 0, 0, img.width, img.height);
-                let data = context.getImageData(0, 0, img.width, img.height).data;
-                let noise = new PerlinNoise(img.width, img.height);
-                
-                let idx = 0;
-                for (let x = 0; x < noise.length; ++x) {
-                    for (let y = 0; y < noise.width; ++y) {
-                        noise.noiseGrid[x][y] = data[idx] / 255.0;
-                        idx += 4;
-                    }
-                }
-
-                resolve(noise);
-            });
-        })
-    }
-
-    calc(xyz = new Vector()) {
-        let s = (xyz.get(0) + xyz.get(1) + xyz.get(2)) * this.F3; //Skew Factor
-        let i = Math.floor(xyz.get(0) + s), j = Math.floor(xyz.get(1) + s), k = Math.floor(xyz.get(2) + s);
-        let zero = xyz.sub(new Vector(i, j, k).subNum((i + j + k) * this.G3));
-        let ii, jj, kk, i1, j1, k1, i2, j2, k2, t0, t1, t2, t3;
-
-        if (zero.get(0) >= zero.get(1)) {
-            j1 = 0;
-            i2 = 1;
-            if (zero.get(1) >= zero.get(2)) { //X Y Z
-                i1 = 1;  
-                k1 = 0; 
-                j2 = 1; 
-                k2 = 0; 
-            } else if (zero.get(0) >= zero.get(2)) { //X Z Y
-                i1 = 1;  
-                k1 = 0;  
-                j2 = 0; 
-                k2 = 1; 
-            } else { //Z X Y
-                i1 = 0;  
-                k1 = 1; 
-                j2 = 0; 
-                k2 = 1; 
-            } 
-        } else { 
-            i1 = 0;
-            j2 = 1;
-            if (zero.get(1) < zero.get(2)) { //Z Y X
-                j1 = 0; 
-                k1 = 1; 
-                i2 = 0;  
-                k2 = 1; 
-            } else if (zero.get(0) < zero.get(2)) { //Y Z X
-                j1 = 1; 
-                k1 = 0; 
-                i2 = 0; 
-                k2 = 1; 
-            } else { //Y X Z
-                j1 = 1; 
-                k1 = 0; 
-                i2 = 1; 
-                k2 = 0; 
-            } 
-        }
-    
-        const one = zero.sub(new Vector(i1 - this.G3, j1 - this.G3, k1 - this.G3));
-        const two = zero.sub(new Vector(i2 - this.G2, j2 - this.G2, k2 - this.G2));
-        const three = zero.sub(new Vector(1.0 - this.G1, 1.0 - this.G1, 1.0 - this.G1));
-        
-        ii = i & 255, jj = j & 255, kk = k & 255;
-        
-        t0 = 0.6 - zero.squaredLength();
-        let nSum = 0;
-        if (t0 >= 0) {
-            nSum += Math.pow(t0, 4) * dot(zero, this.gradients[this.perm[ii + this.perm[jj + this.perm[kk]]] % 12]);
-        }
-
-        t1 = 0.6 - one.squaredLength();
-        if (t1 >= 0) {
-            nSum += Math.pow(t1, 4) * dot(one, this.gradients[this.perm[ii + i1 + this.perm[jj + j1 + this.perm[kk + k1]]] % 12]);
-        }
-        
-        t2 = 0.6 - two.squaredLength();
-        if (t2 >= 0) {
-            nSum += Math.pow(t2, 4) * dot(two, this.gradients[this.perm[ii + i2 + this.perm[jj + j2 + this.perm[kk + k2]]] % 12]);
-        }
-
-        t3 = 0.6 - three.squaredLength();
-        if (t3 >= 0) {
-            nSum += Math.pow(t3, 4) * dot(three, this.gradients[this.perm[ii + 1 +  this.perm[jj + 1  + this.perm[kk + 1]]] % 12]);
-        }
-        
-        return 32.0 * nSum;
-    }
-
-    generate(amplitude, frequency, octaveCount, lacunarity, persistence) {
-        let x, y;
-
-        for (let octave = 0; octave < octaveCount; ++octave) {
-            for (let xPos = 0; xPos < this.length; ++xPos) {
-                x = (xPos + 0.5) * frequency;
-                for (let yPos = 0; yPos < this.width; ++yPos) {
-                    y = (yPos + 0.5) * frequency;
-                    this.noiseGrid[xPos][yPos] += this.calc(new Vector(x, y, 0)) * amplitude;
-                }
-            }
-
-            amplitude *= persistence;
-            frequency *= lacunarity;
-        }
-    }
-
-    generateAt(position, amplitude, frequency, octaveCount, lacunarity, persistence) {
-        let noise = 0;
-        for (let octave = 0; octave < octaveCount; ++octave) {
-            noise += this.calc(new Vector(position.get(0), position.get(2), 0).multNum(frequency)) * amplitude;
-            amplitude *= persistence;
-            frequency *= lacunarity;
-        }
-
-        return noise;
-    }
-
-    get(x, y) {
-        return this.noiseGrid[x][y];
-    }
-
-    toPNG() {
-        let canvas = document.createElement("canvas");
-        canvas.width = this.length;
-        canvas.height = this.width;
-        let context = canvas.getContext("2d"), img = context.createImageData(this.length, this.width);
-        let idx = 0;
-
-        for (let x = 0; x < this.length; ++x) {
-            for (let y = 0; y < this.width; ++y) {
-                let color = 255.0 * this.noiseGrid[x][y];
-                img.data[idx++] = color;
-                img.data[idx++] = color;
-                img.data[idx++] = color;
-                img.data[idx++] = 255.0;
-            }
-        }
-
-        context.putImageData(img, 0, 0);
-        canvas.toBlob(blob => {
-            let blobUrl = URL.createObjectURL(blob), link = document.createElement("a"); 
-            link.href = blobUrl;
-            link.download = "noise.png";
-            document.body.appendChild(link); // Or append it whereever you want
-            link.click();
-            document.body.removeChild(link);
-        }, "image/png");
-    }
-}
-
-//#endregion
-
 //#region Camera
 export class Camera {
     origin = new Vector();
@@ -637,7 +416,6 @@ export class Camera {
     }
 
     updateUniforms(structName, gpu, ids = { perspective: "perspective", camPos: "cameraPosition", world: "world" }) {
-        let world = this.cameraMatrix.translate(this.translation).rotateY(this.yaw).rotateX(this.pitch);
         gpu.setGlobalUniform(structName, ids.perspective, this.perspective.mult(this.getView()).m);
         gpu.setGlobalUniform(structName, ids.world, this.getWorld().m);
         gpu.setGlobalUniform(structName, ids.camPos, this.origin.toArr());
@@ -854,7 +632,9 @@ export class RenderPass {
     createVertexBuffer(device, vertices, flags = GPUBufferUsage.COPY_DST) {
         this.vertexBuffer = device.createBuffer({ size: vertices.byteLength, usage: GPUBufferUsage.VERTEX | flags });
         device.queue.writeBuffer(this.vertexBuffer, 0, vertices, 0, vertices.length);
-        
+    }
+
+    autoVertexCount() {
         this.drawCounts.vertex = this.vertexBuffer.size / this.vertexSize;
     }
 
@@ -1255,6 +1035,10 @@ export class GPU {
 
     setVertexBuffer(passName, vertices, flags = GPUBufferUsage.COPY_DST) {
         this.passes[passName].createVertexBuffer(this.device, vertices, flags);
+    }
+
+    autoVertexCount(passName) {
+        this.passes[passName].autoVertexCount();
     }
 
     async setTexture(passName, settings) {
