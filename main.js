@@ -112,13 +112,11 @@ class Renderer {
         this.gpu.setUniform("grass", "grassInfo", "time", [timestamp]);
         this.gpu.renderFrame();
 
-        /*if (this.fpsCounter != null && fpsUpdateCycle == 10) {
+        if (fpsUpdateCycle == 10) {
             this.fpsCounter.textContent = (10.0 / fpsFrequencySum).toFixed(0) + " FPS";
             fpsFrequencySum = 0;
             fpsUpdateCycle = 0;
-        }*/
-
-        this.fpsCounter.textContent = (1.0 / deltaTime).toFixed(0) + " FPS";
+        }
 
         requestAnimationFrame(time => { 
             if (this.fpsCounter != null)
