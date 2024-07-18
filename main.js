@@ -109,7 +109,7 @@ class Renderer {
         this.gpu.setRenderView(texture.createView(), this.msaaTexture.createView(), this.depthTexture.createView());
         this.updateCamera(deltaTime);
         
-        //this.gpu.setUniform("grass", "grassInfo", "time", [timestamp]);
+        this.gpu.setUniform("grass", "grassInfo", "time", [timestamp]);
         this.gpu.renderFrame();
 
         /*if (this.fpsCounter != null && fpsUpdateCycle == 10) {
