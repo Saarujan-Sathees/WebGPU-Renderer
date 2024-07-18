@@ -385,10 +385,10 @@ document.addEventListener("DOMContentLoaded", async () => {
         } 
     });*/
     
-    /*let grassInstance = new Grass(new util.Vector(0.5, 8, 0), new util.Vector(500, 0, 500), new util.Vector(500, 0, 500), 
-                                  new util.Vector(-200, 100, 10), 12);*/
+    let grassInstance = new Grass(new util.Vector(0.5, 8, 0), new util.Vector(500, 0, 500), new util.Vector(500, 0, 500), 
+                                  new util.Vector(-200, 200, 10), 12);
 
-    //await grassInstance.generate(display);
+    await grassInstance.generate(display);
 
 
     /*let ground = new shapes.Quadrilateral(new util.Vertex(new util.Vector(1000, 0, -1000), new util.Color(255, 0, 0)),
